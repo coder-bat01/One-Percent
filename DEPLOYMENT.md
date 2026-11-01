@@ -124,9 +124,11 @@ The repository includes `render.yaml`, a Render Blueprint for this app.
 
 The Blueprint sets `COOKIE_SECURE=true`, `DATABASE_PATH=/data/one-percent.sqlite`, and `PORT=10000`. It uses the `singapore` region by default; change it in `render.yaml` before the first deploy if another region is closer. The service name `one-percent` must be available in your workspace; change `name` if Render asks.
 
-A persistent disk can be attached to only one instance, and Render does not allow scaling a service with a disk. Keep the service at one instance.
+A persistent disk can be attached to only one instance, and Render does not allow scaling a service with a disk. Keep the service at one instance. Because the disk cannot be shared by old and new instances, Render stops the old instance before starting the new one during a deploy, so expect a few seconds of deployment downtime. Render also does not allow changing the shutdown delay for a disk-backed service.
 
 The Docker image starts as root only for the entrypoint: it fixes ownership of the mounted disk, then drops to the unprivileged `node` user before starting the server. Do not override the entrypoint with a command that skips this step when using a Render disk.
+
+`render.yaml` validates against Render's Blueprint schema. The image was built and run locally with a root-owned volume: the health check passed, the server ran as UID 1000, and SQLite data plus a session survived a container restart.
 
 ### Render backups
 
@@ -137,6 +139,8 @@ node scripts/backup.mjs /data/backup-$(date +%F).sqlite
 ```
 
 Then transfer the file off the disk. Render's Shell supports [Magic-Wormhole](https://render.com/docs/disks#magic-wormhole) for moving files to and from a disk-backed service. Copy backups to durable storage outside Render and test restores periodically.
+
+Render automatically creates an encrypted snapshot of the disk once every 24 hours and retains it for seven days. Render recommends against restoring a disk snapshot for a custom database such as SQLite, because the database can restore to a corrupted state. Use the SQLite backup above for database recovery; treat Render snapshots as a last-resort disk recovery option.
 
 ## First deployment checklist
 

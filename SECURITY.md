@@ -1,6 +1,6 @@
 # Security review
 
-Tested: **2026-11-01** · Next.js 16.4.3 · Node.js 22.13.1 · production standalone build
+Tested: **2026-11-01** · Next.js 16.4.3 · Node.js 22.13.1 · Docker 29.4.0 · production standalone build
 
 ## Scope
 
@@ -13,6 +13,7 @@ The review covered the web application, API, authentication/session handling, pa
 - Secret, source-map, and build-artifact checks.
 - Automated HTTP security smoke test (`npm run security:smoke`).
 - Browser checks for stored/reflected/DOM XSS, cookie exposure, and CSP behavior.
+- Docker image build and run with a root-owned persistent volume, including health checks and restart persistence.
 - Lighthouse accessibility, best-practices, and SEO audits on the auth screen and signed-in app.
 
 ## Result
@@ -20,6 +21,7 @@ The review covered the web application, API, authentication/session handling, pa
 **123 of 124 automated security checks passed. 1 warning, 0 failures.**
 
 - `npm audit`: 0 known vulnerabilities (production and full dependency tree).
+- Docker image builds and runs successfully. The app process runs as UID 1000 (`node`), not root; a root-owned test volume was repaired by the entrypoint; `/api/health` reached healthy; SQLite data and a session survived a container restart.
 - No secrets, database files, `.env` files, or client source maps in the repository or build output.
 - Stored and reflected XSS payloads were rendered as inert text. `window.__xss*` probes never fired, and `document.cookie` could not read the session cookie.
 - Lighthouse: **100 Accessibility, 100 Best Practices, 100 SEO** on both the auth screen and the signed-in app.
@@ -78,9 +80,9 @@ Sessions last 30 days with no idle timeout, no “sign out everywhere” action,
 
 Registration is open, with no email verification, password reset, account deletion, or data export. Rate limits and resource caps reduce abuse, but a public launch should add email verification, password reset, account deletion/export, and legal pages.
 
-### 7. Data at rest — Low / deployment-dependent
+### 7. Data at rest and backups — Low / deployment-dependent
 
-The SQLite database and backups are not application-encrypted. Confirm that the Render disk and off-host backups are encrypted at rest, and protect backup access.
+Render encrypts persistent disks and their automatic snapshots at rest. The application itself does not encrypt the SQLite file, and off-host backup copies are your responsibility. Protect those copies, and do not rely on a Render disk snapshot to recover a SQLite database (Render recommends against restoring a disk snapshot for custom databases). Use the SQLite-aware backup and test restores.
 
 ### 8. Multi-use invitation links — Informational
 
@@ -104,7 +106,7 @@ The Docker base image uses a mutable tag, and `next/font` fetches Google Fonts a
 
 ### 13. Not tested here — Informational
 
-TLS termination, Render's proxy behavior, the Docker image build, Safari/Firefox, and external DDoS tooling were not exercised locally. The standalone production server and all application behavior were tested.
+TLS termination, Render's proxy behavior, Safari/Firefox, and external DDoS tooling were not exercised locally. The Docker image, root-owned volume handling, health check, backup command, and restart persistence were tested. Deploy to Render staging and repeat the live smoke test before announcing the public URL.
 
 ## Reproduction
 
