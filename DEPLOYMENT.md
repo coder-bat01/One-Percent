@@ -59,7 +59,7 @@ docker run -d --name one-percent \
   one-percent
 ```
 
-The image includes a health check that calls `/api/health`.
+The image includes a health check that calls `/api/health`. Its entrypoint fixes ownership of the mounted `/data` volume and then drops to the unprivileged `node` user before starting the server.
 
 ## Reverse proxy
 
@@ -110,6 +110,33 @@ server {
 ```
 
 If the proxy rewrites `Host` or strips the `Origin` header, POST requests will fail the same-origin check. Keep the original host and origin.
+
+## Render
+
+The repository includes `render.yaml`, a Render Blueprint for this app.
+
+1. Push the repository to GitHub, GitLab, or Bitbucket.
+2. In Render, choose **New + → Blueprint** and select the repository.
+3. Render reads `render.yaml` and creates a Docker web service with a persistent disk mounted at `/data`.
+4. Choose the **0.5c-512mb** instance (or larger). Persistent disks require a paid instance type; the free plan cannot attach one.
+5. Add a custom domain in Render if you have one. Render provisions TLS automatically.
+6. Wait for the health check at `/api/health` to pass, then open the service URL.
+
+The Blueprint sets `COOKIE_SECURE=true`, `DATABASE_PATH=/data/one-percent.sqlite`, and `PORT=10000`. It uses the `singapore` region by default; change it in `render.yaml` before the first deploy if another region is closer. The service name `one-percent` must be available in your workspace; change `name` if Render asks.
+
+A persistent disk can be attached to only one instance, and Render does not allow scaling a service with a disk. Keep the service at one instance.
+
+The Docker image starts as root only for the entrypoint: it fixes ownership of the mounted disk, then drops to the unprivileged `node` user before starting the server. Do not override the entrypoint with a command that skips this step when using a Render disk.
+
+### Render backups
+
+Use the Render Shell to take a consistent SQLite snapshot:
+
+```sh
+node scripts/backup.mjs /data/backup-$(date +%F).sqlite
+```
+
+Then transfer the file off the disk. Render's Shell supports [Magic-Wormhole](https://render.com/docs/disks#magic-wormhole) for moving files to and from a disk-backed service. Copy backups to durable storage outside Render and test restores periodically.
 
 ## First deployment checklist
 

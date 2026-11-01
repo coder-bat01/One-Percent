@@ -80,7 +80,7 @@ For a container deployment:
 docker compose up -d --build
 ```
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for reverse-proxy, HTTPS, persistent-volume, backup, and upgrade details.
+A Render Blueprint is included in `render.yaml`. See [DEPLOYMENT.md](DEPLOYMENT.md) for Render, reverse-proxy, HTTPS, persistent-volume, backup, and upgrade details.
 
 - Set `DATABASE_PATH` to a location on a persistent volume if `.data/` is not persistent on your host.
 - Serve over HTTPS and set `COOKIE_SECURE=true` on a public deployment.
