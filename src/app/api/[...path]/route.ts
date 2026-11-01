@@ -29,8 +29,9 @@ function enforceRateLimit(
   limit: number,
   windowMs: number,
   message: string,
+  global = false,
 ) {
-  const result = rateLimit(key, limit, windowMs);
+  const result = rateLimit(key, limit, windowMs, { global });
   if (result.allowed) return;
   const wait =
     result.retryAfter >= 60
@@ -123,6 +124,7 @@ export async function POST(request: NextRequest, context: Context) {
           30,
           60 * 60_000,
           "Too many account creation attempts.",
+          true,
         );
         enforceRateLimit(
           `register:${address}`,
@@ -136,6 +138,7 @@ export async function POST(request: NextRequest, context: Context) {
           600,
           15 * 60_000,
           "Too many sign-in attempts.",
+          true,
         );
         enforceRateLimit(
           `login:${address}`,
@@ -164,6 +167,12 @@ export async function POST(request: NextRequest, context: Context) {
       return withoutSession(json({ ok: true }), request);
     }
     const user = requireUser(request);
+    enforceRateLimit(
+      `mutate:${user.id}`,
+      300,
+      60_000,
+      "Too many changes in a short time.",
+    );
     if (path[0] === "invites" && path[2] === "join")
       enforceRateLimit(
         `join:${user.id}`,

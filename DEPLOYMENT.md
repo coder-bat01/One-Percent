@@ -183,6 +183,8 @@ Do not run old and new servers against the same database during a schema change.
 - **One process only.** Multiple replicas break the in-memory SSE notifications and increase SQLite write contention.
 - **No serverless.** The database and event streams require a long-lived process and disk.
 - **Rate limiting is in-memory.** Limits reset on restart and are per process. That matches the single-process architecture.
+- **Per-IP limits trust proxy headers.** Keep the Node port behind a trusted reverse proxy that overwrites `X-Real-IP`/`X-Forwarded-For`. A directly exposed port lets a client rotate those headers; app-wide and per-account caps still apply.
+- **Account resource caps.** Accounts can own up to 20 parties, keep up to 2,000 task records (200 active), and each party can have up to 50 active invitations. Authenticated writes are rate limited per account.
 - **No email delivery.** Email is an account identifier only; there is no verification or password reset.
 - **Registration is open.** Rate limiting reduces abuse but does not replace an invitation system for accounts.
 - **No account deletion.** Add it before handling regulated personal data.

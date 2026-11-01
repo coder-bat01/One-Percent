@@ -38,7 +38,7 @@ A `localhost` invitation only works on the machine running the app. To use the a
 - **Yes/no:** mark done and undo.
 - **Count:** custom units such as reps, pages, or glasses; quick increments, arbitrary additions, and total corrections.
 - **Duration:** timer start/pause/resume and manual minutes; goals support minutes plus seconds.
-- Schedule tasks daily, on selected weekdays, or once. Start/end dates and task ordering are supported. Each account can have up to 200 active tasks; archive a task to free a slot.
+- Schedule tasks daily, on selected weekdays, or once. Start/end dates and task ordering are supported. Each account can have up to 200 active tasks and 2,000 total task records (archived history still counts), own up to 20 parties, and each party can have up to 50 active invitations. Authenticated writes are rate limited per account.
 - Daily completion gives each scheduled task equal weight and includes partial progress. Completion caps at 100%, but actual over-target quantities are retained.
 - No scheduled tasks means "No tasks planned", not 0% or 100%.
 - Editing preserves past daily targets and schedules. Pending edits are available in the task editor. A tracking-type change after logging starts tomorrow.
@@ -101,6 +101,18 @@ npm run build
 ```
 
 Or run the first two together with `npm run check`.
+
+The [security review](SECURITY.md) records the controls tested, the current findings, and the residual launch risks.
+
+For a disposable local server, the security smoke test checks headers, cookies, CSRF, body limits, authorization boundaries, invite security, SQL/XSS-shaped input, SSE audience isolation, and rate limiting. It creates test accounts and must never be run against a real database:
+
+```sh
+SECURITY_BASE_URL=http://127.0.0.1:3105 \
+DATABASE_PATH=.data/security-test.sqlite \
+npm run security:smoke
+```
+
+On PowerShell, set `$env:SECURITY_BASE_URL` and `$env:DATABASE_PATH` first.
 
 The isolated regression suite exercises authentication/session expiry, auth rate limiting, task ownership, concurrent increments across processes, corrections, stale-edit conflicts, historical snapshots, schedules, archive boundaries, streaks, persistent timers, 23/25-hour DST days, timezone changes, invitation expiry/revocation, membership removal, shared-history privacy, and ownership transfer.
 

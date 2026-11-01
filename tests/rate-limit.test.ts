@@ -17,6 +17,32 @@ test("rate limiting blocks after the limit, resets, and reports retry time", (t)
   assert.equal(rateLimit(key, 2, 60_000).allowed, true);
 });
 
+test("global rate-limit buckets are isolated from client buckets", (t) => {
+  t.mock.timers.enable({
+    apis: ["Date"],
+    now: new Date("2026-03-02T12:00:00Z"),
+  });
+  const globalKey = `global-limit-test-${Math.random()}`;
+  const clientKey = `client-limit-test-${Math.random()}`;
+  assert.equal(rateLimit(globalKey, 1, 60_000, { global: true }).allowed, true);
+  assert.equal(rateLimit(globalKey, 1, 60_000, { global: true }).allowed, false);
+  assert.equal(rateLimit(clientKey, 1, 60_000).allowed, true);
+  assert.equal(rateLimit(clientKey, 1, 60_000).allowed, false);
+});
+
+test("a flood of client buckets cannot clear global limits", (t) => {
+  t.mock.timers.enable({
+    apis: ["Date"],
+    now: new Date("2026-03-02T12:00:00Z"),
+  });
+  const globalKey = `global-flood-test-${Math.random()}`;
+  assert.equal(rateLimit(globalKey, 1, 60_000, { global: true }).allowed, true);
+  assert.equal(rateLimit(globalKey, 1, 60_000, { global: true }).allowed, false);
+  for (let index = 0; index < 10_050; index++)
+    rateLimit(`flood-${index}-${Math.random()}`, 1, 60_000);
+  assert.equal(rateLimit(globalKey, 1, 60_000, { global: true }).allowed, false);
+});
+
 test("client key prefers the proxy's real IP header", () => {
   assert.equal(
     clientKey({

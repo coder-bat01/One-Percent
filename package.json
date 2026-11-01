@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
     "check": "npm run typecheck && npm test",
-    "backup": "node scripts/backup.mjs"
+    "backup": "node scripts/backup.mjs",
+    "security:smoke": "node scripts/security-smoke.mjs"
   },
   "dependencies": {
     "@js-temporal/polyfill": "^0.5.1",

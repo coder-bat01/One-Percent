@@ -1,11 +1,20 @@
 type Bucket = { count: number; resetAt: number };
 
 const buckets = new Map<string, Bucket>();
+const globalBuckets = new Map<string, Bucket>();
 const MAX_BUCKETS = 10_000;
 
 export type RateLimitResult = {
   allowed: boolean;
   retryAfter: number;
+};
+
+export type RateLimitOptions = {
+  /**
+   * Global limits are kept in a separate map so a flood of user-controlled
+   * client/account keys cannot clear the app-wide caps.
+   */
+  global?: boolean;
 };
 
 /**
@@ -20,17 +29,25 @@ export function rateLimit(
   key: string,
   limit: number,
   windowMs: number,
+  options: RateLimitOptions = {},
 ): RateLimitResult {
   const time = Date.now();
-  if (buckets.size >= MAX_BUCKETS) {
-    for (const [bucketKey, bucket] of buckets) {
-      if (bucket.resetAt <= time) buckets.delete(bucketKey);
+  const map = options.global ? globalBuckets : buckets;
+  if (map === buckets && map.size >= MAX_BUCKETS) {
+    for (const [bucketKey, bucket] of map) {
+      if (bucket.resetAt <= time) map.delete(bucketKey);
     }
-    if (buckets.size >= MAX_BUCKETS) buckets.clear();
+    // Bound memory without touching the protected global buckets. An attacker
+    // can rotate user-controlled keys, but the global caps remain in force.
+    while (map.size >= MAX_BUCKETS) {
+      const oldest = map.keys().next().value;
+      if (oldest === undefined) break;
+      map.delete(oldest);
+    }
   }
-  const current = buckets.get(key);
+  const current = map.get(key);
   if (!current || current.resetAt <= time) {
-    buckets.set(key, { count: 1, resetAt: time + windowMs });
+    map.set(key, { count: 1, resetAt: time + windowMs });
     return { allowed: true, retryAfter: 0 };
   }
   if (current.count >= limit)

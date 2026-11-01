@@ -2048,7 +2048,7 @@ label small {
 }
 .step > span {
   font-size: 9px;
-  opacity: 0.65;
+  opacity: 0.8;
 }
 .step > svg {
   margin-top: auto;

@@ -710,6 +710,56 @@ test("persistent account, personal history, timers, and private-party boundaries
   );
 
   await t.test(
+    "account resource caps bound parties, tasks, and active invitations",
+    async () => {
+      const partyOwner = await account();
+      for (let index = 0; index < 20; index++)
+        store.createParty(partyOwner.user.id, {
+          name: `Party ${index}`,
+          description: "",
+        });
+      assert.throws(
+        () =>
+          store.createParty(partyOwner.user.id, {
+            name: "One too many",
+            description: "",
+          }),
+        status(400),
+      );
+
+      const inviteOwner = await account();
+      const party = store.createParty(inviteOwner.user.id, {
+        name: "Invite cap",
+        description: "",
+      });
+      for (let index = 0; index < 50; index++)
+        store.createInvite(inviteOwner.user.id, party.id);
+      assert.throws(
+        () => store.createInvite(inviteOwner.user.id, party.id),
+        status(400),
+      );
+
+      const taskOwner = await account();
+      const insert = db.prepare(
+        "INSERT INTO tasks(id,user_id,revision,position,created_date,archived_from) VALUES(?,?,1,?,?,NULL)",
+      );
+      db.exec("BEGIN");
+      for (let index = 0; index < 2000; index++)
+        insert.run(
+          `cap-${index}-${taskOwner.user.id}`,
+          taskOwner.user.id,
+          index,
+          "2026-03-02",
+        );
+      db.exec("COMMIT");
+      assert.throws(
+        () => store.saveTask(taskOwner.user.id, { ...taskDefaults }),
+        status(400),
+      );
+    },
+  );
+
+  await t.test(
     "SQLite persists sessions, tasks, and concurrent increments across processes",
     async () => {
       const a = await account();

@@ -469,6 +469,12 @@ export function saveTask(userId: string, input: TaskInput): void {
       partyId: value.partyId,
     };
     if (!value.id) {
+      const total = one<{ count: number }>(
+        "SELECT COUNT(*) AS count FROM tasks WHERE user_id=?",
+        userId,
+      )!.count;
+      if (total >= 2000)
+        throw new AppError(400, "You have reached the limit of 2000 tasks.");
       const active = one<{ count: number }>(
         "SELECT COUNT(*) AS count FROM tasks WHERE user_id=? AND archived_from IS NULL",
         userId,
@@ -1093,6 +1099,12 @@ export function createParty(
   const value = parse(partySchema, input);
   return transaction(() => {
     user(userId);
+    const owned = one<{ count: number }>(
+      "SELECT COUNT(*) AS count FROM parties WHERE owner_id=?",
+      userId,
+    )!.count;
+    if (owned >= 20)
+      throw new AppError(400, "You can own up to 20 parties.");
     const id = randomUUID();
     run(
       "INSERT INTO parties(id,name,description,owner_id,created_at) VALUES(?,?,?,?,?)",
@@ -1179,6 +1191,20 @@ export function createInvite(
   return transaction(() => {
     user(userId);
     ownerParty(userId, partyId);
+    run(
+      "DELETE FROM invites WHERE party_id=? AND (revoked=1 OR expires_at<=?)",
+      partyId,
+      now(),
+    );
+    const active = one<{ count: number }>(
+      "SELECT COUNT(*) AS count FROM invites WHERE party_id=?",
+      partyId,
+    )!.count;
+    if (active >= 50)
+      throw new AppError(
+        400,
+        "This party has reached its active invitation limit.",
+      );
     const id = randomUUID(),
       token = randomBytes(32).toString("base64url"),
       expiresAt = now() + 7 * 86400000;

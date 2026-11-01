@@ -12,4 +12,5 @@ tests
 PLAN.md
 README.md
 DEPLOYMENT.md
+SECURITY.md
 npm-debug.log*

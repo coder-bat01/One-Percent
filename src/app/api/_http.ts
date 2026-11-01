@@ -61,9 +61,41 @@ export async function readBody(
   }
   if (Number(request.headers.get("content-length") ?? 0) > 32768)
     throw new AppError(413, "This request is too large.");
-  const text = await request.text();
-  if (Buffer.byteLength(text, "utf8") > 32768)
-    throw new AppError(413, "This request is too large.");
+  let text = "";
+  const reader = request.body?.getReader();
+  if (reader) {
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (!value) continue;
+        size += value.byteLength;
+        if (size > 32768) {
+          try {
+            await reader.cancel();
+          } catch {
+            /* The client may already be gone. */
+          }
+          throw new AppError(413, "This request is too large.");
+        }
+        chunks.push(value);
+      }
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(400, "The request body could not be read.");
+    } finally {
+      try {
+        reader.releaseLock();
+      } catch {
+        /* The stream is already closed. */
+      }
+    }
+    text = Buffer.concat(chunks.map((chunk) => Buffer.from(chunk))).toString(
+      "utf8",
+    );
+  }
   let value: unknown;
   try {
     value = JSON.parse(text);
