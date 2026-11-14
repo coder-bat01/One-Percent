@@ -1,15 +1,19 @@
 #!/bin/sh
 set -e
 
-# Render (and some other hosts) mount persistent disks as root-owned. Start as
-# root only long enough to make the database directory writable, then drop to
-# the unprivileged node user for the actual application process.
+export HOSTNAME=0.0.0.0
+
+# Render mounts persistent disks as root-owned. Start as root only long enough
+# to make the database directory writable, then drop to the unprivileged node
+# user for the actual application process.
+#
+# This also covers the diskless free plan, where the database lives inside the
+# container (for example /app/.data/one-percent.sqlite).
 if [ "$(id -u)" = "0" ]; then
-  mkdir -p /data
-  chown -R node:node /data
-  export HOSTNAME=0.0.0.0
+  database="${DATABASE_PATH:-/data/one-percent.sqlite}"
+  mkdir -p "$(dirname "$database")"
+  chown -R node:node "$(dirname "$database")"
   exec gosu node "$@"
 fi
 
-export HOSTNAME=0.0.0.0
 exec "$@"

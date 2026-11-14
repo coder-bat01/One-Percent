@@ -115,24 +115,45 @@ If the proxy rewrites `Host` or strips the `Origin` header, POST requests will f
 
 The repository includes `render.yaml`, a Render Blueprint for this app.
 
-1. Push the repository to GitHub, GitLab, or Bitbucket.
-2. In Render, choose **New + → Blueprint** and select the repository.
-3. Render reads `render.yaml` and creates a Docker web service with a persistent disk mounted at `/data`.
-4. Choose the **0.5c-512mb** instance (or larger). Persistent disks require a paid instance type; the free plan cannot attach one.
-5. Add a custom domain in Render if you have one. Render provisions TLS automatically.
-6. Wait for the health check at `/api/health` to pass, then open the service URL.
+### Free plan (no payment method)
 
-The Blueprint sets `COOKIE_SECURE=true`, `DATABASE_PATH=/data/one-percent.sqlite`, and `PORT=10000`. It uses the `singapore` region by default; change it in `render.yaml` before the first deploy if another region is closer. The service name `one-percent` must be available in your workspace; change `name` if Render asks.
+The Blueprint is configured for Render's **free** instance:
 
-A persistent disk can be attached to only one instance, and Render does not allow scaling a service with a disk. Keep the service at one instance. Because the disk cannot be shared by old and new instances, Render stops the old instance before starting the new one during a deploy, so expect a few seconds of deployment downtime. Render also does not allow changing the shutdown delay for a disk-backed service.
+- Plan `free` (0.1 CPU / 512 MB) and region `singapore`
+- Docker runtime, health check at `/api/health`
+- `DATABASE_PATH=/app/.data/one-percent.sqlite` inside the container
+- `COOKIE_SECURE=true`, `PORT=10000`
 
-The Docker image starts as root only for the entrypoint: it fixes ownership of the mounted disk, then drops to the unprivileged `node` user before starting the server. Do not override the entrypoint with a command that skips this step when using a Render disk.
+Free instances **cannot attach a persistent disk**. Render wipes the local filesystem on every redeploy, restart, and spin-down, so all accounts, tasks, parties, and sessions are lost. Render also sleeps a free service after 15 minutes without traffic and takes about a minute to wake it. Treat a free deployment as a demo, not as a home for real user data.
 
-`render.yaml` validates against Render's Blueprint schema. The image was built and run locally with a root-owned volume: the health check passed, the server ran as UID 1000, and SQLite data plus a session survived a container restart.
+To deploy: **New + → Blueprint**, select the repository, and apply. No card is required for the free plan.
 
-### Render backups
+### Paid plan with a persistent disk (durable)
 
-Use the Render Shell to take a consistent SQLite snapshot:
+A persistent disk requires a paid instance. Change `render.yaml` back to a disk-backed service:
+
+```yaml
+    plan: 0.5c-512mb
+    envVars:
+      # ...
+      - key: DATABASE_PATH
+        value: /data/one-percent.sqlite
+    disk:
+      name: one-percent-data
+      mountPath: /data
+      sizeGB: 1
+```
+
+Notes:
+
+- A persistent disk can be attached to only one instance, and Render does not allow scaling a service with a disk. Keep the service at one instance. Because the disk cannot be shared by old and new instances, Render stops the old instance before starting the new one during a deploy, so expect a few seconds of deployment downtime.
+- The Docker image starts as root only for the entrypoint: it creates the database directory, fixes ownership, then drops to the unprivileged `node` user before starting the server. The same entrypoint also works without a disk.
+- Add a custom domain in Render if you have one. Render provisions TLS automatically.
+- `render.yaml` validates against Render's Blueprint schema. The image was built and run locally with a root-owned volume: the health check passed, the server ran as UID 1000, and SQLite data plus a session survived a container restart.
+
+### Render backups (paid disk only)
+
+Free instances have no Shell, so they cannot be backed up or restored through the app. On a disk-backed service, use the Render Shell to take a consistent SQLite snapshot:
 
 ```sh
 node scripts/backup.mjs /data/backup-$(date +%F).sqlite

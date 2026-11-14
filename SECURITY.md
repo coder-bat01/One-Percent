@@ -82,7 +82,9 @@ Registration is open, with no email verification, password reset, account deleti
 
 ### 7. Data at rest and backups — Low / deployment-dependent
 
-Render encrypts persistent disks and their automatic snapshots at rest. The application itself does not encrypt the SQLite file, and off-host backup copies are your responsibility. Protect those copies, and do not rely on a Render disk snapshot to recover a SQLite database (Render recommends against restoring a disk snapshot for custom databases). Use the SQLite-aware backup and test restores.
+On a paid Render instance, Render encrypts persistent disks and their automatic snapshots at rest. The application itself does not encrypt the SQLite file, and off-host backup copies are your responsibility. Protect those copies, and do not rely on a Render disk snapshot to recover a SQLite database (Render recommends against restoring a disk snapshot for custom databases). Use the SQLite-aware backup and test restores.
+
+On the **free** Render instance there is no disk, no Shell, and no backup path: the filesystem is wiped on redeploy, restart, or spin-down. The free deployment is a demo only; do not store real user data there.
 
 ### 8. Multi-use invitation links — Informational
 

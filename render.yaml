@@ -2,8 +2,10 @@ services:
   - type: web
     name: one-percent
     runtime: docker
-    # Persistent disks require a paid instance type.
-    plan: 0.5c-512mb
+    # Free instances cannot attach a persistent disk. Data is ephemeral: it is
+    # lost on redeploy, restart, or after the service sleeps from inactivity.
+    # Switch to a paid plan and re-add the disk block to keep data.
+    plan: free
     region: singapore
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health
@@ -13,10 +15,6 @@ services:
       - key: COOKIE_SECURE
         value: "true"
       - key: DATABASE_PATH
-        value: /data/one-percent.sqlite
+        value: /app/.data/one-percent.sqlite
       - key: PORT
         value: "10000"
-    disk:
-      name: one-percent-data
-      mountPath: /data
-      sizeGB: 1
