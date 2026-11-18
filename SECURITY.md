@@ -1,6 +1,6 @@
 # Security review
 
-Tested: **2026-11-01** · Next.js 16.4.3 · Node.js 22.13.1 · Docker 29.4.0 · production standalone build
+Tested: **2026-11-18** · Next.js 16.4.6 · Node.js 22.13.1 · Docker 29.4.0 · production standalone build
 
 ## Scope
 
@@ -20,7 +20,7 @@ The review covered the web application, API, authentication/session handling, pa
 
 **123 of 124 automated security checks passed. 1 warning, 0 failures.**
 
-- `npm audit`: 0 known vulnerabilities (production and full dependency tree).
+- `npm audit --omit=dev`: 0 known production vulnerabilities. The full tree reports one unpatchable dev-tooling advisory (picomatch ReDoS, no patched release exists); see finding 12.
 - Docker image builds and runs successfully. The app process runs as UID 1000 (`node`), not root; a root-owned test volume was repaired by the entrypoint; `/api/health` reached healthy; SQLite data and a session survived a container restart.
 - No secrets, database files, `.env` files, or client source maps in the repository or build output.
 - Stored and reflected XSS payloads were rendered as inert text. `window.__xss*` probes never fired, and `document.cookie` could not read the session cookie.
@@ -105,6 +105,10 @@ The app has request/body/SSE/resource caps, but public DDoS, disk exhaustion, an
 ### 12. Supply chain and build — Informational
 
 The Docker base image uses a mutable tag, and `next/font` fetches Google Fonts at build time (runtime fonts are self-hosted). Pin the base image digest and consider vendoring fonts for reproducible builds. Run `npm audit` and an image scanner in CI.
+
+Next.js was upgraded to 16.4.6 to clear GHSA-mfr8-8qww-v76h and GHSA-vc7v-qv4w-wrv8 (cache disclosure across root params via `'use cache'`/`unstable_cache()`). This app uses neither feature and serves `no-store` on all authenticated responses, so those advisories did not expose data here.
+
+`npm audit --omit=dev` reports 0 production vulnerabilities. The full tree flags CVE-2026-112366 (picomatch ReDoS, GHSA-fc5q-39xc-vjpf) in the lint toolchain (`eslint-config-next` → `fast-glob` → `micromatch` → `picomatch`). No patched picomatch release exists (4.0.7 is the latest and is affected). The vulnerable path requires passing attacker-controlled glob patterns to a matcher; no user input reaches glob matching in this app, and the copy is dev-tooling only. Re-run `npm audit` when a patched release ships.
 
 ### 13. Not tested here — Informational
 
