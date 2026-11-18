@@ -112,7 +112,7 @@ Next.js was upgraded to 16.4.6 to clear GHSA-mfr8-8qww-v76h and GHSA-vc7v-qv4w-w
 
 ### 13. Not tested here — Informational
 
-TLS termination, Render's proxy behavior, Safari/Firefox, and external DDoS tooling were not exercised locally. The Docker image, root-owned volume handling, health check, backup command, and restart persistence were tested. Deploy to Render staging and repeat the live smoke test before announcing the public URL.
+Safari/Firefox and external DDoS tooling were not exercised. TLS termination and Render's proxy behavior were verified against a live free-tier deployment on 2026-11-18: HTTP redirected to HTTPS, cookies carried `Secure`, SSE streamed through Render's proxy, and all 38 live checks (`npm run check:live`) passed.
 
 ## Reproduction
 

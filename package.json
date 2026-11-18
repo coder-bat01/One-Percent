@@ -13,7 +13,8 @@
     "test": "node --import tsx --test tests/*.test.ts",
     "check": "npm run typecheck && npm test",
     "backup": "node scripts/backup.mjs",
-    "security:smoke": "node scripts/security-smoke.mjs"
+    "security:smoke": "node scripts/security-smoke.mjs",
+    "check:live": "node scripts/live-check.mjs"
   },
   "dependencies": {
     "@js-temporal/polyfill": "^0.5.1",

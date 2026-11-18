@@ -114,6 +114,12 @@ npm run security:smoke
 
 On PowerShell, set `$env:SECURITY_BASE_URL` and `$env:DATABASE_PATH` first.
 
+After deploying, verify the live instance with `npm run check:live` (creates test accounts and data):
+
+```sh
+LIVE_BASE_URL=https://your-app.onrender.com npm run check:live
+```
+
 The isolated regression suite exercises authentication/session expiry, auth rate limiting, task ownership, concurrent increments across processes, corrections, stale-edit conflicts, historical snapshots, schedules, archive boundaries, streaks, persistent timers, 23/25-hour DST days, timezone changes, invitation expiry/revocation, membership removal, shared-history privacy, and ownership transfer.
 
 Real-browser verification also exercises account creation, all tracking types, invite acceptance in a separate browser context, live progress updates, removal from an already-open party, timer reload persistence, pending task edits, input-preserving server errors, keyboard-trapped dialogs, offline/reconnect behavior, navigation history, and narrow-screen layouts. Test accounts and databases are separate from the default application database.
